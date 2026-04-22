@@ -1,137 +1,169 @@
 'use client';
-import { FileCode, Clock, ChevronRight, Search, Filter, Loader2, AlertCircle } from 'lucide-react';
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 
-const HistoryPage = () => {
-  const router = useRouter();
+import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import { History, AlertTriangle, Zap, ShieldAlert, Lightbulb, Search, Filter, FileCode } from 'lucide-react';
+import Link from 'next/link';
+
+const getScoreColor = (s: number) => s >= 80 ? '#00ff9f' : s >= 60 ? '#8b5cf6' : s >= 40 ? '#ff9600' : '#ff4444';
+
+export default function HistoryPage() {
   const [reviews, setReviews] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('all');
 
   useEffect(() => {
-    const fetchHistory = async () => {
-      try {
-        const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-        const token = localStorage.getItem('token');
-        
-        if (!token) {
-           router.push('/login');
-           return;
-        }
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    fetch('http://localhost:5000/api/history', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => setReviews(Array.isArray(data) ? data : []))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
 
-        const res = await fetch(`${BASE_URL}/history`, {
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
-        });
-        
-        if (!res.ok) {
-           if (res.status === 401) router.push('/login');
-           throw new Error('Failed to fetch history');
-        }
+  const filtered = reviews.filter(r => {
+    const matchSearch = search === '' || r.language?.toLowerCase().includes(search.toLowerCase());
+    const matchFilter = filter === 'all' || (filter === 'pass' && r.score >= 80) || (filter === 'warn' && r.score >= 60 && r.score < 80) || (filter === 'fail' && r.score < 60);
+    return matchSearch && matchFilter;
+  });
 
-        const data = await res.json();
-        setReviews(data);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchHistory();
-  }, [router]);
-
-  // Handle parsing dynamic review components and formatting standard dates
-  const formatDate = (dateString: string) => {
-     return new Date(dateString).toLocaleDateString('en-US', {
-        month: 'short', day: 'numeric', year: 'numeric'
-     });
-  };
-
-  return (
-    <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Review History</h1>
-          <p className="text-muted-foreground mt-1">Manage and compare all your previous AI code reviews.</p>
+  const Skeleton = () => (
+    <div className="p-5 rounded-xl space-y-3" style={{ border: '1px solid rgba(255,255,255,0.06)', background: '#0d0d16' }}>
+      <div className="flex gap-4">
+        <div className="skeleton w-12 h-12 rounded-lg shrink-0" />
+        <div className="flex-1 space-y-2">
+          <div className="skeleton h-3 w-40 rounded" />
+          <div className="skeleton h-2 w-24 rounded" />
         </div>
-        <div className="flex items-center gap-3">
-           <div className="relative">
-              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input 
-                type="text" 
-                placeholder="Search reviews..."
-                className="bg-white/5 border border-white/10 rounded-lg py-2 pl-10 pr-4 outline-none focus:border-primary transition-all text-sm w-64"
-              />
-           </div>
-           <button className="glass p-2 hover:bg-white/5">
-              <Filter size={20} />
-           </button>
-        </div>
-      </div>
-
-      <div className="glass overflow-hidden">
-        <div className="p-4 border-b border-white/5 bg-white/5 grid grid-cols-12 gap-4 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-           <div className="col-span-5">Code ID</div>
-           <div className="col-span-2">Language</div>
-           <div className="col-span-2 text-center">Score</div>
-           <div className="col-span-2 text-center">Date</div>
-           <div className="col-span-1"></div>
-        </div>
-        
-        {isLoading ? (
-           <div className="p-12 flex items-center justify-center">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-           </div>
-        ) : error ? (
-           <div className="p-12 text-center flex flex-col items-center text-red-500 gap-4">
-              <AlertCircle size={32} />
-              <p>{error}</p>
-           </div>
-        ) : reviews.length === 0 ? (
-           <div className="p-12 text-center text-muted-foreground">
-              No code reviews executed yet. Submit your first snippet on the Review page!
-           </div>
-        ) : (
-          <div className="divide-y divide-white/5">
-             {reviews.map((review) => (
-               <div
-                  key={review.id} 
-                  className="p-4 grid grid-cols-12 gap-4 items-center hover:bg-white/[0.03] transition-colors group cursor-default"
-               >
-                  <div className="col-span-5 flex items-center gap-3 overflow-hidden">
-                     <div className="w-10 h-10 rounded bg-white/5 flex items-center justify-center shrink-0">
-                        <FileCode size={20} className="text-primary" />
-                     </div>
-                     <span className="font-mono text-xs truncate text-muted-foreground">{review.id}</span>
-                  </div>
-                  <div className="col-span-2 text-sm text-muted-foreground italic uppercase">{review.language}</div>
-                  <div className="col-span-2 text-center">
-                     <span className={`font-bold ${review.score > 80 ? 'text-primary' : review.score > 50 ? 'text-yellow-500' : 'text-red-500'}`}>
-                        {review.score}
-                     </span>
-                  </div>
-                  <div className="col-span-2 text-center text-xs text-muted-foreground">{formatDate(review.createdAt)}</div>
-                  <div className="col-span-1 flex justify-end">
-                     {/* Stubbed forward action without sub-page routing configured beyond standard card visualization */}
-                     <ChevronRight size={18} className="text-muted-foreground opacity-50" />
-                  </div>
-               </div>
-             ))}
-          </div>
-        )}
-      </div>
-      
-      <div className="flex items-center justify-center gap-2 py-8">
-         <button className="glass px-4 py-2 text-sm disabled:opacity-50" disabled>Previous</button>
-         <button className="glass px-4 py-2 text-sm bg-primary/10 border-primary/20 text-primary">1</button>
-         <button className="glass px-4 py-2 text-sm hover:bg-white/5 disabled:opacity-50" disabled>Next</button>
       </div>
     </div>
   );
-};
 
-export default HistoryPage;
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-white">Review History</h1>
+          <p className="text-sm mt-1" style={{ color: '#6b7280' }}>{reviews.length} total analyses</p>
+        </div>
+        <Link href="/dashboard/review">
+          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="btn-neon px-4 py-2.5 text-sm font-bold flex items-center gap-2">
+            <FileCode size={15} /> New Review
+          </motion.button>
+        </Link>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#6b7280' }} />
+          <input
+            value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search by language..."
+            className="input-neon pl-9 py-2.5 text-sm w-full"
+          />
+        </div>
+        <div className="flex gap-2">
+          {[
+            { id: 'all', label: 'All' },
+            { id: 'pass', label: '✅ Pass' },
+            { id: 'warn', label: '⚠️ Warn' },
+            { id: 'fail', label: '❌ Fail' },
+          ].map(f => (
+            <button key={f.id} onClick={() => setFilter(f.id)}
+              className="px-3 py-2 rounded-lg text-xs font-bold transition-all"
+              style={filter === f.id
+                ? { background: 'rgba(0,255,255,0.1)', color: '#00ffff', border: '1px solid rgba(0,255,255,0.25)' }
+                : { background: 'rgba(255,255,255,0.03)', color: '#6b7280', border: '1px solid rgba(255,255,255,0.06)' }
+              }
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* List */}
+      <div className="space-y-3">
+        {loading ? (
+          Array(5).fill(0).map((_, i) => <Skeleton key={i} />)
+        ) : filtered.length === 0 ? (
+          <div className="py-20 text-center rounded-xl" style={{ border: '1px dashed rgba(255,255,255,0.06)' }}>
+            <History size={32} className="mx-auto mb-3 opacity-20" style={{ color: '#00ffff' }} />
+            <div className="font-bold text-white">No reviews found</div>
+            <p className="text-xs mt-1" style={{ color: '#6b7280' }}>
+              {search || filter !== 'all' ? 'Try adjusting your filters.' : 'Submit your first code review to get started.'}
+            </p>
+          </div>
+        ) : (
+          filtered.map((review, i) => {
+            const issueCount = review.issues?.length || 0;
+            const color = getScoreColor(review.score);
+            return (
+              <motion.div
+                key={review.id}
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+                className="p-5 rounded-xl flex items-start gap-4 group cursor-pointer transition-all duration-200"
+                style={{ border: '1px solid rgba(255,255,255,0.06)', background: '#0d0d1680' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${color}30`; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.06)'; }}
+              >
+                {/* Score Badge */}
+                <div className="w-14 h-14 rounded-xl flex flex-col items-center justify-center shrink-0"
+                  style={{ background: `${color}12`, border: `1px solid ${color}30` }}>
+                  <span className="text-xl font-black" style={{ color }}>{review.score}</span>
+                  <span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: `${color}99` }}>/100</span>
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <span className="text-sm font-black text-white">{review.language?.toUpperCase() || 'CODE'}</span>
+                    <span className={review.score >= 80 ? 'badge-low' : review.score >= 60 ? 'badge-medium' : 'badge-high'}>
+                      {review.score >= 80 ? 'PASS' : review.score >= 60 ? 'WARN' : 'FAIL'}
+                    </span>
+                    {issueCount > 0 && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(255,68,68,0.08)', color: '#ff6666', border: '1px solid rgba(255,68,68,0.15)' }}>
+                        {issueCount} issue{issueCount > 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs" style={{ color: '#6b7280' }}>
+                    {new Date(review.createdAt).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </div>
+
+                  {/* Issue chips */}
+                  {review.issues && review.issues.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {review.issues.slice(0, 3).map((issue: any, j: number) => (
+                        <span key={j} className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
+                          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#9ca3af' }}>
+                          {issue.type} · {issue.severity}
+                        </span>
+                      ))}
+                      {review.issues.length > 3 && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ color: '#6b7280' }}>+{review.issues.length - 3} more</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Score Bar */}
+                <div className="hidden sm:flex flex-col items-end gap-1 shrink-0 w-24">
+                  <div className="w-full h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                    <div className="h-full rounded-full" style={{ width: `${review.score}%`, background: color, boxShadow: `0 0 6px ${color}80` }} />
+                  </div>
+                  <span className="text-[10px] font-semibold" style={{ color: '#4b5563' }}>
+                    {new Date(review.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
+                </div>
+              </motion.div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
