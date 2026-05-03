@@ -1,9 +1,13 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
-import { Code2, ShieldCheck, Zap, BarChart2, GitBranch, Bot, ChevronRight, Terminal, Star } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
+import { Code2, ShieldCheck, Zap, BarChart2, GitBranch, Bot, ChevronRight, Terminal, Star, CheckCircle } from 'lucide-react';
+
+// Lazy load the 3D background to keep initial JS bundle small and improve time-to-interactive
+const ParticleBackground = dynamic(() => import('../components/ui/ParticleBackground'), { ssr: false });
 
 const NAV_LINKS = ['Features', 'Pricing', 'Docs', 'Blog'];
 
@@ -19,8 +23,8 @@ const FEATURES = [
 const STATS = [
   { value: '10M+', label: 'Lines reviewed' },
   { value: '99.9%', label: 'Uptime' },
-  { value: '<200ms', label: 'Avg response' },
-  { value: '50+', label: 'Languages' },
+  { value: '<50ms', label: 'Inference Speed' },
+  { value: '50+', label: 'Languages Supported' },
 ];
 
 const CODE_DEMO = `// 🔍 CodeSense AI detected 3 issues
@@ -48,6 +52,8 @@ async function fetchUser(id: number) {
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
   const [typed, setTyped] = useState('');
+  const { scrollYProgress } = useScroll();
+  const y = useTransform(scrollYProgress, [0, 1], [0, 200]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -68,43 +74,42 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="page-container">
+    <div className="bg-[#09090b] text-white min-h-screen font-sans selection:bg-cyan-500/30 overflow-x-hidden relative">
+      <ParticleBackground />
+
       {/* =========== NAVBAR =========== */}
       <motion.nav
         initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 h-16"
+        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 h-20"
         style={{
-          background: scrolled ? 'rgba(10,10,10,0.95)' : 'transparent',
-          backdropFilter: scrolled ? 'blur(20px)' : 'none',
-          borderBottom: scrolled ? '1px solid rgba(255,255,255,0.06)' : 'none',
-          transition: 'all 0.4s ease',
+          background: scrolled ? 'rgba(9, 9, 11, 0.7)' : 'transparent',
+          backdropFilter: scrolled ? 'blur(16px)' : 'none',
+          borderBottom: scrolled ? '1px solid rgba(255,255,255,0.05)' : 'none',
+          transition: 'all 0.3s ease',
         }}
       >
-        <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-black text-sm"
-            style={{ background: 'linear-gradient(135deg, #00ffff, #8b5cf6)', boxShadow: '0 0 15px rgba(0,255,255,0.3)' }}>C</div>
-          <span className="font-black text-lg tracking-tight text-white">Code<span style={{ color: '#00ffff' }}>Sense</span> <span style={{ color: '#8b5cf6', fontSize: '0.7em' }}>AI</span></span>
+        <Link href="/" className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-black text-lg bg-gradient-to-br from-cyan-400 to-purple-600 shadow-[0_0_20px_rgba(34,211,238,0.4)]">
+            C
+          </div>
+          <span className="font-black text-xl tracking-tight text-white">Code<span className="text-cyan-400">Sense</span> <span className="text-purple-500 text-sm">AI</span></span>
         </Link>
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden md:flex items-center gap-10">
           {NAV_LINKS.map(l => (
-            <a key={l} href="#" className="text-sm font-semibold transition-colors" style={{ color: '#6b7280' }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
-              onMouseLeave={e => (e.currentTarget.style.color = '#6b7280')}>
+            <a key={l} href="#" className="text-sm font-semibold text-gray-400 hover:text-white transition-colors duration-200">
               {l}
             </a>
           ))}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <Link href="/login">
-            <button className="text-sm font-bold px-4 py-2 rounded-lg transition-all" style={{ color: '#9ca3af' }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
-              onMouseLeave={e => (e.currentTarget.style.color = '#9ca3af')}>
+            <button className="text-sm font-bold text-gray-400 hover:text-white transition-colors">
               Sign in
             </button>
           </Link>
           <Link href="/login?tab=signup">
-            <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-              className="btn-neon px-4 py-2 text-sm font-bold">
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+              className="px-5 py-2.5 text-sm font-bold rounded-lg bg-white text-black hover:bg-gray-100 transition-colors shadow-[0_0_20px_rgba(255,255,255,0.2)]">
               Get Started →
             </motion.button>
           </Link>
@@ -112,112 +117,106 @@ export default function LandingPage() {
       </motion.nav>
 
       {/* =========== HERO =========== */}
-      <section className="min-h-screen flex flex-col items-center justify-center text-center px-6 pt-20 relative overflow-hidden">
-        {/* Background orbs */}
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full opacity-10 blur-3xl pointer-events-none"
-          style={{ background: '#00ffff', animation: 'float 8s ease-in-out infinite' }} />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full opacity-8 blur-3xl pointer-events-none"
-          style={{ background: '#8b5cf6', animation: 'float 10s ease-in-out infinite reverse' }} />
+      <section className="min-h-screen flex flex-col items-center justify-center text-center px-6 pt-32 pb-20 relative z-10">
+        <motion.div style={{ y }} className="space-y-8 max-w-5xl mx-auto flex flex-col items-center justify-center">
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 backdrop-blur-md">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_10px_rgba(34,211,238,1)]" />
+            CodeSense 2.0 is now live
+          </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}
-          className="space-y-6 max-w-4xl relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold"
-            style={{ background: 'rgba(0,255,255,0.07)', border: '1px solid rgba(0,255,255,0.2)', color: '#00ffff' }}>
-            <span className="w-1.5 h-1.5 rounded-full bg-[#00ff9f] animate-pulse" />
-            AI-Powered Code Intelligence Platform
-          </div>
+          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1 }}
+            className="text-6xl md:text-8xl font-black leading-tight tracking-tighter">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-500">Autonomous</span><br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600">Code Intelligence</span>
+          </motion.h1>
 
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black leading-[0.95] tracking-tight">
-            <span className="text-white">Ship Better</span><br />
-            <span className="gradient-text">Code Faster</span>
-          </h1>
+          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.2 }}
+            className="text-xl md:text-2xl max-w-3xl mx-auto text-gray-400 font-medium">
+            Stop reviewing code manually. Our AI builds a semantic whole-repo graph to detect bugs, auto-fix PRs, and map out cognitive complexity in milliseconds.
+          </motion.p>
 
-          <p className="text-lg md:text-xl max-w-2xl mx-auto leading-relaxed" style={{ color: '#9ca3af' }}>
-            CodeSense AI analyzes your code for <strong style={{ color: '#fff' }}>bugs</strong>, <strong style={{ color: '#fff' }}>vulnerabilities</strong>, and <strong style={{ color: '#fff' }}>performance issues</strong> in milliseconds using state-of-the-art LLMs.
-          </p>
-
-          {/* Typewriter */}
-          <div className="font-mono text-sm h-6" style={{ color: '#00ffff' }}>
-            {'>'} {typed}<span className="animate-pulse">_</span>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.3 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-5 pt-6">
             <Link href="/login?tab=signup">
-              <motion.button whileHover={{ scale: 1.03, boxShadow: '0 0 30px rgba(0,255,255,0.4)' }} whileTap={{ scale: 0.97 }}
-                className="btn-solid px-8 py-4 font-black text-base flex items-center gap-2">
-                Start Free Analysis <ChevronRight size={18} />
+              <motion.button whileHover={{ scale: 1.05, boxShadow: '0 0 40px rgba(34,211,238,0.5)' }} whileTap={{ scale: 0.95 }}
+                className="px-8 py-4 font-black text-lg rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white flex items-center gap-2 border border-cyan-400/30">
+                Start Free Analysis <ChevronRight size={20} />
               </motion.button>
             </Link>
-            <Link href="/login">
-              <button className="flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-base transition-all"
-                style={{ border: '1px solid rgba(255,255,255,0.1)', color: '#9ca3af' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.2)'; (e.currentTarget as HTMLElement).style.color = '#fff'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)'; (e.currentTarget as HTMLElement).style.color = '#9ca3af'; }}>
-                Sign In
+            <Link href="/demo">
+              <button className="px-8 py-4 rounded-xl font-bold text-lg border border-gray-700 bg-gray-900/50 backdrop-blur-sm text-gray-300 hover:text-white hover:border-gray-500 transition-all">
+                View Interactive Demo
               </button>
             </Link>
-          </div>
+          </motion.div>
 
-          {/* Stars */}
-          <div className="flex items-center justify-center gap-1.5 text-xs" style={{ color: '#6b7280' }}>
-            <div className="flex gap-0.5">{Array(5).fill(0).map((_, i) => <Star key={i} size={12} fill="#ff9600" stroke="none" />)}</div>
-            <span>Trusted by 5,000+ developers worldwide</span>
-          </div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
+            className="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-500 pt-8">
+            <span className="flex items-center gap-2"><CheckCircle size={16} className="text-cyan-500"/> No credit card required</span>
+            <span className="flex items-center gap-2"><CheckCircle size={16} className="text-cyan-500"/> 14-day Enterprise trial</span>
+            <span className="flex items-center gap-2"><CheckCircle size={16} className="text-cyan-500"/> Zero-trust sandbox</span>
+          </motion.div>
         </motion.div>
 
-        {/* Code Demo Card */}
+        {/* Code Demo Card - Glassmorphism */}
         <motion.div
-          initial={{ opacity: 0, y: 60 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.3 }}
-          className="mt-16 w-full max-w-2xl rounded-2xl overflow-hidden relative z-10 text-left"
-          style={{ border: '1px solid rgba(0,255,255,0.15)', background: '#0d0d16', boxShadow: '0 0 60px rgba(0,255,255,0.08), 0 40px 80px rgba(0,0,0,0.8)' }}
+          initial={{ opacity: 0, y: 60 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.4 }}
+          className="mt-20 w-full max-w-4xl rounded-2xl overflow-hidden relative z-10 text-left border border-white/10 bg-black/40 backdrop-blur-2xl shadow-[0_30px_100px_rgba(0,0,0,0.8),0_0_60px_rgba(34,211,238,0.1)]"
         >
-          <div className="flex items-center gap-2 px-5 py-3" style={{ background: 'rgba(0,0,0,0.4)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-            {['#ff5f57', '#febc2e', '#28c840'].map((c, i) => <div key={i} className="w-2.5 h-2.5 rounded-full" style={{ background: c }} />)}
-            <span className="text-xs ml-2 font-mono" style={{ color: '#6b7280' }}>auth_service.js — CodeSense AI Analysis</span>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-white/5">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-red-500" />
+              <div className="w-3 h-3 rounded-full bg-yellow-500" />
+              <div className="w-3 h-3 rounded-full bg-green-500" />
+              <span className="text-sm ml-4 font-mono text-gray-400">auth_controller.ts — CodeSense AI</span>
+            </div>
+            <div className="text-xs font-mono text-cyan-400 border border-cyan-500/30 px-2 py-1 rounded bg-cyan-500/10">
+              {typed}<span className="animate-pulse">_</span>
+            </div>
           </div>
-          <pre className="p-5 text-xs leading-relaxed overflow-x-auto font-mono" style={{ color: '#9ca3af', maxHeight: '300px' }}>
+          <pre className="p-8 text-sm leading-relaxed overflow-x-auto font-mono text-gray-300">
             <code>{CODE_DEMO}</code>
           </pre>
         </motion.div>
       </section>
 
       {/* =========== STATS =========== */}
-      <section className="py-16 px-6" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
+      <section className="py-20 px-6 relative z-10 border-t border-white/5 bg-black/20 backdrop-blur-lg">
+        <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
           {STATS.map((s, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
-              className="text-center p-6 rounded-xl" style={{ border: '1px solid rgba(255,255,255,0.04)', background: 'rgba(255,255,255,0.01)' }}>
-              <div className="text-3xl font-black gradient-text-cyan">{s.value}</div>
-              <div className="text-xs mt-1 font-semibold" style={{ color: '#6b7280' }}>{s.label}</div>
+              className="text-center p-8 rounded-2xl border border-white/5 bg-white/[0.02] backdrop-blur-md hover:bg-white/[0.04] transition-colors">
+              <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">{s.value}</div>
+              <div className="text-sm mt-3 font-semibold text-gray-400 uppercase tracking-wider">{s.label}</div>
             </motion.div>
           ))}
         </div>
       </section>
 
       {/* =========== FEATURES =========== */}
-      <section id="features" className="py-20 px-6">
-        <div className="max-w-6xl mx-auto">
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-16">
-            <div className="text-xs font-black tracking-widest uppercase mb-4" style={{ color: '#00ffff' }}>Core Features</div>
-            <h2 className="text-4xl md:text-6xl font-black text-white leading-tight">
-              Everything you need to<br /><span className="gradient-text">write perfect code</span>
+      <section id="features" className="py-32 px-6 relative z-10">
+        <div className="max-w-7xl mx-auto">
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-20">
+            <div className="text-sm font-black tracking-widest uppercase mb-4 text-cyan-400">Enterprise Grade Features</div>
+            <h2 className="text-5xl md:text-7xl font-black text-white leading-tight">
+              A paradigm shift in<br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-600">Developer Experience</span>
             </h2>
           </motion.div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {FEATURES.map((f, i) => {
               const Icon = f.icon;
               return (
-                <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.08 }}
-                  className="p-6 rounded-xl group cursor-default transition-all duration-300 relative overflow-hidden"
-                  style={{ border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(13,13,20,0.6)' }}
-                  whileHover={{ y: -4, boxShadow: f.glow, borderColor: `${f.color}30` }}
+                <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
+                  className="p-8 rounded-2xl relative overflow-hidden border border-white/5 bg-[#0d0d14]/80 backdrop-blur-xl group hover:border-cyan-500/30 transition-all duration-500"
+                  whileHover={{ y: -5, boxShadow: f.glow }}
                 >
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4"
-                    style={{ background: `${f.color}12`, border: `1px solid ${f.color}25` }}>
-                    <Icon size={20} style={{ color: f.color }} />
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-white/5 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="w-14 h-14 rounded-xl flex items-center justify-center mb-6 bg-white/5 border border-white/10 group-hover:bg-cyan-500/10 group-hover:border-cyan-500/30 transition-all">
+                    <Icon size={28} className="text-gray-300 group-hover:text-cyan-400 transition-colors" />
                   </div>
-                  <h3 className="text-base font-black text-white mb-2">{f.title}</h3>
-                  <p className="text-sm leading-relaxed" style={{ color: '#6b7280' }}>{f.desc}</p>
+                  <h3 className="text-xl font-black text-white mb-3">{f.title}</h3>
+                  <p className="text-base leading-relaxed text-gray-400 group-hover:text-gray-300 transition-colors">{f.desc}</p>
                 </motion.div>
               );
             })}
@@ -226,42 +225,40 @@ export default function LandingPage() {
       </section>
 
       {/* =========== CTA =========== */}
-      <section className="py-24 px-6" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+      <section className="py-32 px-6 relative z-10 border-t border-white/5 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-cyan-900/20 to-black/80 pointer-events-none" />
         <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-          className="max-w-3xl mx-auto text-center space-y-8">
-          <h2 className="text-4xl md:text-6xl font-black text-white leading-tight">
-            Ready to write<br /><span className="gradient-text">flawless code?</span>
+          className="max-w-4xl mx-auto text-center space-y-10 relative z-10">
+          <h2 className="text-5xl md:text-7xl font-black text-white leading-tight">
+            Stop debugging.<br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-600">Start shipping.</span>
           </h2>
-          <p className="text-lg" style={{ color: '#6b7280' }}>
-            Join thousands of developers shipping cleaner, faster, safer code with CodeSense AI.
+          <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+            Join the top 1% of engineering teams that use CodeSense AI to completely automate their code reviews and tech debt resolution.
           </p>
           <Link href="/login?tab=signup">
-            <motion.button whileHover={{ scale: 1.03, boxShadow: '0 0 40px rgba(0,255,255,0.4)' }} whileTap={{ scale: 0.97 }}
-              className="btn-solid px-10 py-5 text-lg font-black flex items-center gap-2 mx-auto">
-              Start for Free <ChevronRight size={20} />
+            <motion.button whileHover={{ scale: 1.05, boxShadow: '0 0 50px rgba(34,211,238,0.6)' }} whileTap={{ scale: 0.95 }}
+              className="px-12 py-6 text-xl font-black rounded-xl bg-white text-black flex items-center gap-3 mx-auto border border-white/20">
+              Deploy Your AI Co-Pilot <ChevronRight size={24} />
             </motion.button>
           </Link>
         </motion.div>
       </section>
 
       {/* =========== FOOTER =========== */}
-      <footer className="py-10 px-6" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center font-black text-black text-xs"
-              style={{ background: 'linear-gradient(135deg, #00ffff, #8b5cf6)' }}>C</div>
-            <span className="font-black text-white">CodeSense <span style={{ color: '#00ffff' }}>AI</span></span>
+      <footer className="py-12 px-6 relative z-10 border-t border-white/5 bg-[#09090b]">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-black text-sm bg-gradient-to-br from-cyan-400 to-purple-600">C</div>
+            <span className="font-black text-white text-lg">CodeSense <span className="text-cyan-400">AI</span></span>
           </Link>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-8">
             {['Twitter', 'GitHub', 'Discord', 'Docs'].map(l => (
-              <a key={l} href="#" className="text-xs font-semibold transition-colors" style={{ color: '#6b7280' }}
-                onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
-                onMouseLeave={e => (e.currentTarget.style.color = '#6b7280')}>
+              <a key={l} href="#" className="text-sm font-semibold text-gray-500 hover:text-white transition-colors">
                 {l}
               </a>
             ))}
           </div>
-          <p className="text-xs" style={{ color: '#4b5563' }}>© 2026 CodeSense AI · All rights reserved</p>
+          <p className="text-sm text-gray-600">© 2026 CodeSense AI Inc. All rights reserved.</p>
         </div>
       </footer>
     </div>
